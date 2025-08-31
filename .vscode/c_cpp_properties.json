@@ -1,24 +1,20 @@
 {
-    "configurations": [
-        {
-            "name": "Linux",
-            "includePath": [
-                "${default}",
-                "${workspaceFolder}/webproxy-lab",
-                "/usr/include",
-                "/usr/include/x86_64-linux-gnu",
-                "/usr/local/include"
-            ],
-            "defines": [
-                "_GNU_SOURCE",
-                "_DEFAULT_SOURCE",
-                "_POSIX_C_SOURCE=200809L"
-            ],
-            "cStandard": "c17",
-            "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64",
-            "compilerPath": "/usr/bin/gcc"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "windows-gcc-x86",
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "defines": [
+        "_GNU_SOURCE",
+        "_DEFAULT_SOURCE",
+        "_POSIX_C_SOURCE=200809L"
+      ],
+      "cStandard": "${default}",
+      "cppStandard": "${default}",
+      "intelliSenseMode": "windows-gcc-x86",
+      "compilerPath": "C:/MinGW/bin/gcc.exe"
+    }
+  ],
+  "version": 4
 }

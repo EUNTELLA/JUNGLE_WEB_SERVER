@@ -137,7 +137,7 @@ void *Calloc(size_t nmemb, size_t size);
 void Free(void *ptr);
 
 /* Sockets interface wrappers */
-int Socket(int domain, int type, int protocol);
+int Socket(int domain , int type, int protocol);
 void Setsockopt(int s, int level, int optname, const void *optval, int optlen);
 void Bind(int sockfd, struct sockaddr *my_addr, int addrlen);
 void Listen(int s, int backlog);

@@ -17,7 +17,7 @@
  * Updated 7/2014 droh:
  *   - Aded reentrant sio (signal-safe I/O) routines
  * 
- * Updated 4/2013 droh: 
+ * Updated 4/2013 droh: 6
  *   - rio_readlineb: fixed edge case bug
  *   - rio_readnb: removed redundant EINTR check
  */
