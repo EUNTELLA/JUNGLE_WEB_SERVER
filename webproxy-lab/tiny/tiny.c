@@ -11,7 +11,7 @@
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
-void serve_static(int fd, char *filename, int filesize);
+void serve_static(int fd, char *filename, int filesize, char *method);
 void get_filetype(char *filename, char *filetype);
 void serve_dynamic(int fd, char *filename, char *cgiargs);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
@@ -86,7 +86,7 @@ void doit(int fd)
                   "Tiny couldn't read the file");
       return;
     }
-    serve_static(fd, filename, sbuf.st_size);
+    serve_static(fd, filename, sbuf.st_size, method);
   }
   else
   { // 동적 컨텐츠 제공  dynamic content
@@ -98,6 +98,13 @@ void doit(int fd)
     }
     serve_dynamic(fd, filename, cgiargs);
   }
+  // 숙제 11
+  if (!(strcasecmp(method, "GET") == 0 || strcasecmp(method, "HEAD") == 0))
+  {
+    clienterror(fd, filename, "501", "Not Implemented",
+                "Tiny dose not implement this method");
+    return;
+  }
 }
 
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg)
@@ -107,13 +114,16 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   /* build HTTP response body*/
 
   sprintf(body, "<html><title>Tiny Error</title>");
-  sprintf(body, "%s<body bgcolor=""ffffff"">\n",body);
+  sprintf(body, "%s<body bgcolor="
+                "ffffff"
+                ">\n",
+          body);
   sprintf(body, "%s%s: %s\r\n", body, errnum, shortmsg);
   sprintf(body, "%s<p>%s: %s\r\n", body, longmsg, cause);
   sprintf(body, "%s<hr><em>The Tiny Web server</em>\r\n", body);
 
   /*print HTTP response*/
-  
+
   sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
   Rio_writen(fd, buf, strlen(buf));
   sprintf(buf, "Content-type: text/html\r\n");
@@ -121,7 +131,6 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   sprintf(buf, "Content-length: %d\r\n\r\n", (int)strlen(body));
   Rio_writen(fd, buf, strlen(buf));
   Rio_writen(fd, body, strlen(body));
-
 }
 
 void read_requesthdrs(rio_t *rp)
@@ -129,40 +138,44 @@ void read_requesthdrs(rio_t *rp)
   char buf[MAXLINE];
 
   Rio_readlineb(rp, buf, MAXLINE);
-  while(strcmp(buf, "\r\n")){
-    Rio_readlineb(rp,buf,MAXLINE);
-    printf("%s",buf);
+  while (strcmp(buf, "\r\n"))
+  {
+    printf("Header: %s", buf);
+    Rio_readlineb(rp, buf, MAXLINE);
   }
-  return;
+  printf("\n");
 }
 
 int parse_uri(char *uri, char *filename, char *cgiargs)
 {
   char *ptr;
 
-  if(!strstr(uri , "cgi-bin")) { //정적 컨텐츠
-    strcpy(cgiargs,"");
-    strcpy(filename,".");
-    strcat(filename,uri);
-    if(uri[strlen(uri)-1] == '/')
+  if (!strstr(uri, "cgi-bin"))
+  { // 정적 컨텐츠
+    strcpy(cgiargs, "");
+    strcpy(filename, ".");
+    strcat(filename, uri);
+    if (uri[strlen(uri) - 1] == '/')
       strcat(filename, "home.html");
     return 1;
   }
-  else { //동적 컨텐츠
-    ptr = index(uri,'?');
-    if (ptr) {
-      strcpy(cgiargs,ptr+1);
+  else
+  { // 동적 컨텐츠
+    ptr = index(uri, '?');
+    if (ptr)
+    {
+      strcpy(cgiargs, ptr + 1);
       *ptr = '\0';
     }
     else
-      strcpy(cgiargs,"");
-    strcpy(filename,".");
-    strcat(filename,uri);
+      strcpy(cgiargs, "");
+    strcpy(filename, ".");
+    strcat(filename, uri);
     return 0;
   }
 }
 
-void serve_static(int fd, char *filename, int filesize)
+void serve_static(int fd, char *filename, int filesize, char *method)
 {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
@@ -179,43 +192,72 @@ void serve_static(int fd, char *filename, int filesize)
   printf("%s", buf);
 
   /* 클라이언트에 응답 body를 보냄 */
-  srcfd = Open(filename, O_RDONLY, 0);
-  srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
-  Close (srcfd);
-  Rio_writen(fd,srcp, filesize);
+  // srcfd = Open(filename, O_RDONLY, 0);
+  // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  // Close (srcfd);
+  // Rio_writen(fd,srcp, filesize);
+  // Munmap(srcp,filesize);
+  
+  //HEAD 요청인 경우 본문 전송 하지 않음
+  if (strcasecmp(method, "HEAD") == 0)
+  {
+    return;
+  }
+  
+  //GET 요청이면 본문전송
+  srcfd = Open(filename,O_RDONLY,0);
+  srcp = Mmap(0,filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  Close(srcfd);
+  Rio_writen(fd,srcp,filesize);
   Munmap(srcp,filesize);
 
+  //11.9 숙제 함수
+
+  // srcfd = Open(filename, O_RDONLY, 0);
+  // char *new_buf = malloc(filesize);
+  // if (new_buf == NULL)
+  // {
+  //   unix_error("malloc error");
+  // }
+  // Rio_readn(srcfd, new_buf, filesize);
+  // Close(srcfd);
+  // Rio_writen(fd, new_buf, filesize);
+  // free(new_buf);
 }
 
-void get_filetype(char *filename, char *filetype){
-  if(strstr(filename,".html"))
-    strcpy(filetype,"text/html");
-  else if (strstr(filename,".gif"))
+void get_filetype(char *filename, char *filetype)
+{
+  if (strstr(filename, ".html"))
+    strcpy(filetype, "text/html");
+  else if (strstr(filename, ".gif"))
     strcpy(filetype, "image/gif");
-  else if (strstr(filename,".png"))
-    strcpy(filetype,"image/png");
+  else if (strstr(filename, ".png"))
+    strcpy(filetype, "image/png");
   else if (strstr(filename, ".jpg"))
-    strcpy(filetype,"image/jpeg");
-  else if (strstr(filename,".mpg"))
-    strcpy(filetype,"video/mpeg");
-  else 
-    strcpy(filetype,"text/plain");
+    strcpy(filetype, "image/jpeg");
+  else if (strstr(filename, ".mpg"))
+    strcpy(filetype, "video/mpeg");
+  else if (strstr(filename, ".mp4"))
+    strcpy(filename, "video/mp4");
+  else
+    strcpy(filetype, "text/plain");
 }
 
 void serve_dynamic(int fd, char *filename, char *cgiargs)
 {
   char buf[MAXLINE], *emptylist[] = {NULL};
 
-  sprintf(buf,"HTTP/1.0 200 OK\r\n");
-  Rio_writen(fd,buf,strlen(buf));
-  sprintf(buf,"Server: Tiny Web Server\r\n");
-  Rio_writen(fd,buf,strlen(buf));
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
+  Rio_writen(fd, buf, strlen(buf));
+  sprintf(buf, "Server: Tiny Web Server\r\n");
+  Rio_writen(fd, buf, strlen(buf));
 
-  if (Fork() == 0) { /* Child */
- /* Real server would set all CGI vars here */
-  setenv("QUERY_STRING", cgiargs, 1);
-  Dup2(fd, STDOUT_FILENO); /* Redirect stdout to client */
-  Execve(filename, emptylist, environ); /* Run CGI program */
- }
-  Wait(NULL); /* Parent waits for and reaps child */         
+  if (Fork() == 0)
+  { /* Child */
+    /* Real server would set all CGI vars here */
+    setenv("QUERY_STRING", cgiargs, 1);
+    Dup2(fd, STDOUT_FILENO);              /* Redirect stdout to client */
+    Execve(filename, emptylist, environ); /* Run CGI program */
+  }
+  Wait(NULL); /* Parent waits for and reaps child */
 }
